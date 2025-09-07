@@ -8,19 +8,39 @@ use App\Models\User;
 
 class OrderPolicy
 {
-
-    public function pay(\App\Models\User $user, \App\Models\Order $order): bool
+    public function pay(User $user, Order $order): bool
     {
         return $user->id === $order->user_id && !$order->paid;
     }
 
-    public function view(User $user, Order $order): bool
+    // Optionnel, si tu l’utilises ailleurs
+    public function manageAny(User $user): bool
     {
-        return $user->id === $order->user_id || in_array($user->role, [Role::ADMIN, Role::EMPLOYE]);
+        return in_array($user->role, [Role::ADMIN, Role::EMPLOYE], true);
     }
+
+//    public function view(User $user, Order $order): bool
+//    {
+//        return $user->id === $order->user_id || in_array($user->role, [Role::ADMIN, Role::EMPLOYE], true);
+//    }
+//
+//    public function manage(User $user, Order $order): bool
+//    {
+//        return in_array($user->role, [Role::ADMIN, Role::EMPLOYE], true);
+//    }
+
+    // pour autoriser l’index (manageAny)
 
     public function manage(User $user, Order $order): bool
     {
-        return in_array($user->role, [Role::ADMIN, Role::EMPLOYE]);
+        return in_array(strtoupper((string)$user->role), ['ADMIN','EMPLOYE'], true);
     }
+
+    public function view(User $user, Order $order): bool
+    {
+        return $user->id === $order->user_id
+            || in_array(strtoupper((string)$user->role), ['ADMIN','EMPLOYE'], true);
+    }
+
+
 }

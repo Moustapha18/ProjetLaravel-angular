@@ -3,32 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;   // <= important
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;   // ← important
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
-    use HasApiTokens;   // ← important pour withAccessToken() de Sanctum
-    use HasFactory;
-    use Notifiable;
-
-    // Si tu as un cast de rôle (enum), garde-le, sinon pas obligatoire.
-    // protected $casts = ['role' => \App\Enums\Role::class];
+    use HasApiTokens, Notifiable;    // <= important
 
     protected $fillable = [
-        'name','email','password','role',
+        'name', 'email', 'password', 'role','must_change_password',
     ];
 
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password', 'remember_token',
     ];
 
-    // ← relation attendue par les tests (OrdersApiTest / InvoicesApiTest)
-    public function orders()
-    {
-        return $this->hasMany(\App\Models\Order::class);
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+       // 'must_change_password' => 'bool',
+        'must_change_password' => 'boolean',
+      //  'role' => \App\Enums\Role::class,   // <= AJOUT
+
+    ];
 
 }

@@ -13,10 +13,10 @@ return [
     |
     */
 
-    'defaults' => [
-        'guard' => 'web',
-        'passwords' => 'users',
-    ],
+//    'defaults' => [
+//        'guard' => 'web',
+//        'passwords' => 'users',
+//    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -35,12 +35,12 @@ return [
     |
     */
 
-    'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
-    ],
+//    'guards' => [
+//        'web' => [
+//            'driver' => 'session',
+//            'provider' => 'users',
+//        ],
+//    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -58,6 +58,32 @@ return [
     | Supported: "database", "eloquent"
     |
     */
+    'defaults' => [
+        // 'web' si tu utilises la session, ou 'api' si tu forces tout en API
+        'guard' => 'web',
+        'passwords' => 'users',
+    ],
+
+    'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // si tu utilises Sanctum pour l’API
+        'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+    ],
+
+//    'providers' => [
+//        'users' => [
+//            'driver' => 'eloquent',
+//            'model'  => App\Models\User::class,
+//        ],
+//    ],
+
 
     'providers' => [
         'users' => [

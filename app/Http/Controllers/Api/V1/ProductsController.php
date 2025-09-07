@@ -3,190 +3,161 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Product\ImportProductsRequest;
-use App\Http\Requests\Product\StoreProductRequest;
-use App\Http\Requests\Product\UpdateProductRequest;
-use App\Http\Requests\Product\UploadProductImageRequest;
-use App\Http\Resources\ProductResource;
 use App\Models\Product;
-use App\Services\Imports\ProductCsvImporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ProductsController extends Controller
 {
-    /**
-     * @OA\Get(
-     *   path="/api/v1/products",
-     *   tags={"Catalogue"},
-     *   summary="Liste paginée des produits",
-     *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
-     *   @OA\Parameter(name="category", in="query", @OA\Schema(type="integer")),
-     *   @OA\Parameter(name="sort", in="query", description="ex: -price_cents", @OA\Schema(type="string")),
-     *   @OA\Response(
-     *     response=200, description="OK",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Product")),
-     *       @OA\Property(property="meta", ref="#/components/schemas/ApiPagination")
-     *     )
-     *   )
-     * )
-     *
-     * @OA\Get(
-     *   path="/api/v1/products/{id}",
-     *   tags={"Catalogue"},
-     *   summary="Détail produit",
-     *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *   @OA\Response(response=200, description="OK", @OA\JsonContent(ref="#/components/schemas/Product")),
-     *   @OA\Response(response=404, description="Not found")
-     * )
-     */
-
-    public function index(Request $r)
+    // GET /api/v1/products?search=&page=&per_page=
+    public function index(Request $request)
     {
-        $params = [
-            'search'   => $r->query('search'),
-            'category' => $r->query('category'),
-            'sort'     => $r->query('sort'),
-            'page'     => (int)$r->query('page', 1),
-            'per_page' => (int)$r->query('per_page', 12),
-        ];
+        $q       = trim((string) $request->query('search', ''));
+        $perPage = (int) $request->query('per_page', 12);
+        $perPage = max(1, min(100, $perPage)); // garde-fou
 
-        // clé versionnée (groupe "products")
-        $key = \App\Support\CacheVersion::key('products', $params);
+        $query = Product::query()->with('category');
 
-        // mise en cache 120s (tu peux monter à 300s)
-        return \Cache::remember($key, 120, function () use ($r) {
-            $q = \App\Models\Product::with('category');
-
-            if ($s = $r->query('search')) {
-                $q->where(fn($qq) => $qq->where('name','like',"%$s%")->orWhere('description','like',"%$s%"));
-            }
-            if ($c = $r->query('category')) {
-                $q->where('category_id', $c);
-            }
-
-            if ($sort = $r->query('sort')) {
-                $dir = str_starts_with($sort, '-') ? 'desc' : 'asc';
-                $col = ltrim($sort, '-');
-                if (in_array($col, ['name','price_cents','stock','id'])) {
-                    $q->orderBy($col, $dir);
-                }
-            } else {
-                $q->orderBy('id','desc');
-            }
-
-            $per = min(max((int)$r->query('per_page', 12), 1), 100);
-            return \App\Http\Resources\ProductResource::collection(
-                $q->paginate($per)->withQueryString()
-            );
-        });
-    }
-    public function uploadImage(UpdateProductImageRequest $req, \App\Models\Product $product)
-    {
-        $file = $req->file('image');
-
-        // Nom propre
-        $name = Str::slug($product->slug ?: $product->name).'-'.time().'.'.$file->getClientOriginalExtension();
-
-        // Disque courant (public ou s3)
-        $disk = config('filesystems.default');
-
-        // Chemin
-        $path = $file->storeAs('products', $name, $disk);
-
-        // (Optionnel) supprimer l’ancienne image si tu veux
-        if ($product->image_path && Storage::disk($disk)->exists($product->image_path)) {
-            Storage::disk($disk)->delete($product->image_path);
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%");
+            });
         }
 
-        $product->update(['image_path' => $path]);
+        $paginator = $query->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
 
-        // URL publique
-        $url = Storage::disk($disk)->url($path);
-
-        return (new ProductResource($product->fresh('category')))->additional([
-            'meta'=>['image_url'=>$url]
-        ]);
-    }
-    public function import(ImportProductsRequest $req, ProductCsvImporter $importer)
-    {
-        $file = $req->file('file');
-        $dry  = (bool)$req->boolean('dry_run', false);
-
-        $result = $importer->import($file->getRealPath(), $dry);
+        // option: expose "image_url" calculée
+        $items = collect($paginator->items())->map(function ($p) {
+            $p->image_url = $p->image_path ? Storage::url($p->image_path) : null;
+            return $p;
+        })->values();
 
         return response()->json([
-            'data' => $result,
-            'meta' => ['dry_run' => $dry],
+            'data' => $items,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'total'        => $paginator->total(),
+            ],
         ]);
     }
 
-    public function deleteImage(\App\Models\Product $product)
+    // GET /api/v1/products/{product}
+    public function show($id)
     {
-        Gate::authorize('admin');
+        $product = Product::with('category')->findOrFail($id);
+        $product->image_url = $product->image_path ? Storage::url($product->image_path) : null;
 
-        if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-            Storage::disk('public')->delete($product->image_path);
-        }
-
-        $product->update(['image_path' => null]);
-        $product->load('category');
-
-        return new \App\Http\Resources\ProductResource($product);
+        return response()->json($product);
     }
 
-    public function store(StoreProductRequest $req)
+    // POST /api/v1/admin/products
+    public function store(Request $request)
     {
-        $data = $req->validated();
+        try {
+            \Log::info('STORE PRODUCT payload', $request->all());
 
-        if ($req->hasFile('image')) {
-            $path = $req->file('image')->store('products', 'public');
-            $data['image_path'] = $path;
+            $data = $request->validate([
+                'name'         => ['required','string','max:255'],
+                'price_cents'  => ['required','integer','min:0'],
+                'description'  => ['nullable','string'],
+                'category_id'  => ['nullable','integer','exists:categories,id'],
+                'stock'        => ['nullable','integer','min:0'],
+                'percent_off'  => ['nullable','integer','min:0','max:100'],
+            ]);
+
+            $product = \App\Models\Product::create($data);
+
+            return response()->json(['data' => $product], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('STORE PRODUCT validation failed', ['errors' => $e->errors()]);
+            return response()->json(['message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (\Throwable $e) {
+            \Log::error('STORE PRODUCT failed', [
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                // 'trace' => $e->getTraceAsString(), // décommente si besoin
+            ]);
+            return response()->json(['message' => 'Server error: '.$e->getMessage()], 500);
         }
-
-        $product = Product::create($data);
-        $product->load('category');
-        $diff = ['before'=>null, 'after'=>$product->only(['name','slug','price_cents','stock','category_id'])];
-        app(\App\Services\AuditService::class)->log(auth()->id(), 'created', $product, $diff);
-
-
-        return (new ProductResource($product))->response()->setStatusCode(201);
     }
 
-    public function update(UpdateProductRequest $req, Product $product)
-    {
-        $data = $req->validated();
 
-        if ($req->hasFile('image')) {
-            // supprimer l’ancienne si existe (optionnel)
-            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                Storage::disk('public')->delete($product->image_path);
-            }
-            $data['image_path'] = $req->file('image')->store('products', 'public');
-        }
+    // PUT /api/v1/admin/products/{product}
+    public function update(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $data = $request->validate([
+            'name'         => ['sometimes', 'required', 'string', 'max:255'],
+            'price_cents'  => ['sometimes', 'required', 'integer', 'min:0'],
+            'description'  => ['nullable', 'string'],
+            'category_id'  => ['nullable', 'integer', 'exists:categories,id'],
+            'stock'        => ['nullable', 'integer', 'min:0'],
+            'percent_off'  => ['nullable', 'integer', 'min:0', 'max:100'],
+        ]);
 
         $product->update($data);
         $product->load('category');
-        $diff = app(\App\Services\AuditService::class)->diff($product);
-        app(\App\Services\AuditService::class)->log(auth()->id(), 'updated', $product, $diff);
+        $product->image_url = $product->image_path ? Storage::url($product->image_path) : null;
 
-
-        return new ProductResource($product);
+        return response()->json($product);
     }
 
-    public function destroy(Product $product){
-        $product->delete();
-        $payload = ['before'=>$product->only(['id','name','slug']), 'after'=>null];
-        app(\App\Services\AuditService::class)->log(auth()->id(), 'deleted', $product, $payload);
-
-        return response()->json(['message'=>'Produit supprimé']);
+    // DELETE /api/v1/admin/products/{product}
+    public function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->delete(); // soft delete si activé dans le modèle
+        return response()->json(['message' => 'Produit supprimé']);
     }
 
+    // POST /api/v1/admin/products/{product}/image
+    public function uploadImage(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
 
-    /**
-     * Delete image for a product (ADMIN)
-     */
+        $request->validate([
+            'image' => ['required', 'file', 'image', 'max:4096'], // 4MB
+        ]);
 
+        // Supprime l’ancienne image si présente
+        if ($product->image_path) {
+            Storage::disk('public')->delete($product->image_path);
+        }
+
+        $path = $request->file('image')->store('products', 'public');
+
+        $product->image_path = $path;
+        $product->save();
+
+        return response()->json([
+            'message'   => 'Image mise à jour',
+            'image_url' => Storage::url($path),
+            'product'   => $product->fresh('category'),
+        ]);
+    }
+
+    // (facultatif) Restauration corbeille
+    public function restore($id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+        $product->restore();
+        return response()->json(['message' => 'Produit restauré']);
+    }
+
+    // (facultatif) Suppression définitive
+    public function forceDelete($id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+        if ($product->image_path) {
+            Storage::disk('public')->delete($product->image_path);
+        }
+        $product->forceDelete();
+        return response()->json(['message' => 'Produit supprimé définitivement']);
+    }
 }

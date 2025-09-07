@@ -11,12 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // database/migrations/xxxx_xx_xx_create_categories_table.php
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->string('slug')->unique();
+            $table->text('description')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
+
 
     }
 
