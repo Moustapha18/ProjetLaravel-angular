@@ -1,0 +1,13 @@
+.chip{display:inline-flex;align-items:center;gap:6px;padding:.25rem .5rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:.75rem}
+.chip::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:#9ca3af}
+.chip-ok{border-color:#bbf7d0;color:#065f46;background:#ecfdf5}.chip-ok::before{background:#10b981}
+.chip-info{border-color:#bae6fd;color:#075985;background:#eff6ff}.chip-info::before{background:#3b82f6}
+.chip-warn{border-color:#fde68a;color:#92400e;background:#fffbeb}.chip-warn::before{background:#f59e0b}
+.chip-bad{border-color:#fecaca;color:#991b1b;background:#fef2f2}.chip-bad::before{background:#ef4444}
+.badge-paid{font-size:.75rem;border:1px solid #bbf7d0;background:#ecfdf5;color:#065f46;border-radius:6px;padding:.125rem .375rem}
+.badge-unpaid{font-size:.75rem;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:6px;padding:.125rem .375rem}
+.table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #eee;border-radius:12px;overflow:hidden}
+.table th,.table td{padding:.75rem;border-top:1px solid #eee}
+.table thead th{background:#fafafa;border-top:none;font-weight:600;text-align:left}
+.actions-row{display:flex;gap:.5rem;justify-content:flex-end}
+.kbd{padding:.125rem .375rem;border:1px solid #e5e7eb;border-bottom-width:2px;border-radius:6px;background:#fff;font-size:.75rem}

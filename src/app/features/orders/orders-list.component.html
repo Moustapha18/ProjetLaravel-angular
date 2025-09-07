@@ -1,0 +1,49 @@
+<div class="flex items-center gap-2 mb-3">
+  <select class="border rounded p-2" [(ngModel)]="status" (change)="applyFilter()">
+    <option value="">Tous les statuts</option>
+    <option value="PENDING">En attente</option>
+    <option value="PAID">Payée</option>
+    <option value="CANCELED">Annulée</option>
+  </select>
+</div>
+
+<div *ngIf="loading()">Chargement…</div>
+<div *ngIf="!loading() && data().length === 0" class="text-gray-500">Aucune commande.</div>
+
+<ul class="space-y-2" *ngIf="!loading()">
+  <li *ngFor="let o of data()" class="border rounded p-3 flex items-center justify-between">
+    <div>
+      <div class="font-semibold">#{{ o.id }}</div>
+      <div class="text-sm">Statut: {{ o.status }}</div>
+    </div>
+    <a [routerLink]="['/orders', o.id]" class="text-blue-600 hover:underline">Détails</a>
+  </li>
+</ul>
+<td class="actions-row">
+  <a [routerLink]="['/orders', o.id]" class="kbd">Voir</a>
+
+  <!-- CLIENT: payer une commande non payée -->
+  <button
+    *ngIf="!o.paid && isClient()"
+    class="kbd"
+    (click)="pay(o.id)">
+    Payer maintenant
+  </button>
+
+  <!-- STAFF: marquer payée -->
+  <button
+    *ngIf="!o.paid && !isClient()"
+    class="kbd"
+    (click)="markPaid(o.id)">
+    Marquer payée
+  </button>
+</td>
+
+
+
+<div class="flex items-center justify-between mt-4" *ngIf="meta() as m">
+  <button (click)="prev()" [disabled]="m.current_page<=1" class="px-3 py-1 border rounded">Précédent</button>
+  <div>Page {{ m.current_page }} / {{ m.last_page }} — {{ m.total }} commandes</div>
+  <button (click)="next()" [disabled]="m.current_page>=m.last_page" class="px-3 py-1 border rounded">Suivant</button>
+</div>
+

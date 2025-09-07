@@ -1,0 +1,29 @@
+<tr *ngFor="let it of cartItems">
+  <td class="p-2">{{ it.name }}</td>
+  <td class="p-2">{{ it.quantity }}</td>
+  <th class="p-2 text-right">Actions</th>
+  <td class="p-2">
+    <ng-container *ngIf="(it.percent_off || it?.promotion?.percent_off || it?.promo?.percent_off); else noPromo">
+      <div class="text-xs line-through text-gray-400">
+        {{ ((it.price_cents || 0) / 100)  }}
+      </div>
+      <div class="font-medium text-emerald-700">
+        {{ (discounted(it) / 100)  }}
+      </div>
+    </ng-container>
+    <ng-template #noPromo>
+      <div class="font-medium">
+        {{ ((it.price_cents || 0) / 100) }}
+      </div>
+    </ng-template>
+    <div class="flex justify-between border-t pt-2 mt-2 text-sm">
+  <span>Total</span>
+  <span class="font-semibold">
+    {{ (totalDiscounted() / 100) | currency:'XOF' }}
+  </span>
+</div>
+  </td>
+  <td class="p-2 text-right">
+    {{ ((discounted(it) || (it.price_cents || 0)) * it.quantity / 100) }}
+  </td>
+</tr>

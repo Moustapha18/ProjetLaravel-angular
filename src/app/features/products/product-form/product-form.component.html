@@ -1,0 +1,44 @@
+<form [formGroup]="form" (ngSubmit)="save()" class="max-w-md mx-auto grid gap-3">
+  <h2 class="text-xl font-semibold">{{ isEdit ? 'Modifier' : 'Créer' }} un produit</h2>
+
+  <!-- Catégorie -->
+  <label class="text-sm">Catégorie</label>
+  <select formControlName="category_id" class="border rounded p-2">
+    <option [ngValue]="null">—</option>
+    <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.name }}</option>
+  </select>
+
+  <!-- Nom -->
+  <label class="text-sm">Nom</label>
+  <input class="border rounded p-2" formControlName="name" placeholder="Nom du produit" />
+  <div class="text-xs text-red-600" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+    Nom invalide
+  </div>
+
+  <!-- Prix en XOF (converti en cents côté TS) -->
+  <label class="text-sm">Prix (en francs CFA)</label>
+  <input type="number" class="border rounded p-2" formControlName="price_fr" placeholder="Prix du produit en francs CFA" />
+  <div class="text-xs text-red-600" *ngIf="form.get('price_fr')?.invalid && form.get('price_fr')?.touched">
+    Prix invalide
+  </div>
+
+  <!-- Stock -->
+  <label class="text-sm">Stock (optionnel)</label>
+  <input type="number" class="border rounded p-2" formControlName="stock" placeholder="Stock" />
+
+  <!-- Description -->
+  <label class="text-sm">Description (optionnel)</label>
+  <textarea rows="3" class="border rounded p-2" formControlName="description" placeholder="Description"></textarea>
+
+  <!-- URL image directe (optionnel, à garder si besoin pour debug) -->
+  <label class="text-sm">URL image (optionnel)</label>
+  <input class="border rounded p-2" formControlName="image_url" placeholder="https://…" />
+
+  <!-- Upload image (recommandé) -->
+  <label class="text-sm">Image (upload)</label>
+  <input type="file" (change)="onFile($event)" accept="image/*" />
+
+  <button class="bg-black text-white py-2 rounded" [disabled]="form.invalid || saving">
+    {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+  </button>
+</form>

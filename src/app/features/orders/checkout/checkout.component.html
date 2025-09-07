@@ -1,0 +1,68 @@
+<!-- Récap du panier -->
+<div *ngIf="items()?.length; else empty">
+  <table class="w-full text-sm border mb-3">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="p-2 text-left">Produit</th>
+        <th class="p-2 text-right">Qté</th>
+        <th class="p-2 text-right">PU (F CFA)</th>
+        <th class="p-2 text-right">Total (F CFA)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let it of items()" class="border-t">
+        <td class="p-2">{{ getName(it) }}</td>
+        <td class="p-2 text-right">{{ getQty(it) }}</td>
+        <td class="p-2 text-right">{{ getUnitPriceCents(it) | number }}</td>
+        <td class="p-2 text-right">{{ lineTotalCents(it) | number }}</td>
+      </tr>
+    </tbody>
+    <tfoot class="border-t">
+      <tr>
+        <td class="p-2" colspan="3"><strong>Total</strong></td>
+        <td class="p-2 text-right"><strong>{{ (total() || 0) | number }}</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Adresse -->
+  <div class="mb-3">
+    <label class="block text-sm mb-1">Adresse de livraison (optionnel)</label>
+    <input class="border rounded p-2 w-full"
+           [(ngModel)]="address"
+           placeholder="Quartier, téléphone..." />
+  </div>
+
+  <!-- Actions -->
+  <div class="flex flex-wrap gap-2">
+    <button class="px-3 py-2 border rounded" (click)="clear()" [disabled]="loading">
+      Vider le panier
+    </button>
+
+    <button class="px-3 py-2 border rounded"
+            (click)="placeOrder(false)" [disabled]="loading || !items().length">
+      {{ loading ? 'Envoi…' : 'Commander (cash à la livraison)' }}
+    </button>
+
+    <button class="px-3 py-2 border rounded bg-black text-white"
+            (click)="placeOrder(true)" [disabled]="loading || !items().length">
+      {{ loading ? 'Envoi…' : 'Payer maintenant' }}
+    </button>
+  </div>
+
+  <!-- Feedback -->
+  <div *ngIf="error" class="text-sm text-red-600 mt-2">
+    {{ error }}
+    <ul *ngIf="fieldErrors.length" class="list-disc pl-5 mt-1">
+      <li *ngFor="let e of fieldErrors">{{ e }}</li>
+    </ul>
+  </div>
+
+  <div *ngIf="success" class="text-sm text-emerald-700 mt-2">
+    Commande créée avec succès.
+  </div>
+</div>
+
+<ng-template #empty>
+  <div class="text-sm text-gray-500">Votre panier est vide.</div>
+</ng-template>

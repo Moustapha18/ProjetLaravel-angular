@@ -1,0 +1,66 @@
+<h2 class="page-title">Produits</h2>
+
+<div class="toolbar">
+  <input class="input" [(ngModel)]="q" (keyup.enter)="applySearch()" placeholder="Rechercher..." />
+  <button class="btn" (click)="applySearch()">Rechercher</button>
+</div>
+
+<div *ngIf="loading()" class="muted">Chargement…</div>
+<div *ngIf="!loading() && items().length === 0" class="muted">Aucun produit.</div>
+
+<!-- ✅ Grille de cartes -->
+<div class="grid" *ngIf="!loading() && items().length">
+  <article *ngFor="let p of items()" class="card">
+    <div class="badge" *ngIf="hasPromo(p)">-{{ promoPercent(p) }}%</div>
+
+    <img
+      *ngIf="p.image_url; else noimg"
+      [src]="p.image_url"
+      alt="{{ p.name }}"
+      class="thumb"
+    />
+    <ng-template #noimg>
+      <div class="thumb thumb--placeholder">🥖</div>
+    </ng-template>
+
+    <h3 class="title">{{ p?.name || '—' }}</h3>
+
+    <div class="price">
+      <ng-container *ngIf="hasPromo(p); else normalPrice">
+        <div class="old">{{ ((p?.price_cents || 0) / 100) | currency:'XOF' }}</div>
+        <div class="new">{{ (discounted(p) / 100) | currency:'XOF' }}</div>
+      </ng-container>
+      <ng-template #normalPrice>
+        <div class="new">{{ ((p?.price_cents || 0) / 100) | currency:'XOF' }}</div>
+      </ng-template>
+    </div>
+
+    <div class="actions">
+  <a [routerLink]="['/products', p?.id]" class="link">Détails</a>
+
+  <!-- Si pas dans le panier -->
+  <button *ngIf="qtyOf(p.id)===0 && !isStaff()" class="btn-primary" (click)="addToCart(p)">
+    Ajouter au panier
+  </button>
+
+  <!-- Si déjà au panier : contrôles e-commerce -->
+  <div *ngIf="qtyOf(p.id)>0 && !isStaff()" class="inline-flex items-center gap-2">
+    <button class="btn" (click)="dec(p.id)">−</button>
+    <span class="min-w-[2ch] text-center font-semibold">{{ qtyOf(p.id) }}</span>
+    <button class="btn" (click)="inc(p.id)">+</button>
+    <button class="btn" (click)="removeFromCart(p.id)" title="Retirer">
+      🗑️ Retirer
+    </button>
+  </div>
+</div>
+
+
+  </article>
+</div>
+
+<!-- Pagination -->
+<div class="pager" *ngIf="meta() as m">
+  <button (click)="prev()" [disabled]="m.current_page <= 1" class="btn">&larr;</button>
+  <span>Page {{ m.current_page }} / {{ m.last_page }} — {{ m.total }} produits</span>
+  <button (click)="next()" [disabled]="m.current_page >= m.last_page" class="btn">&rarr;</button>
+</div>
