@@ -1,4 +1,5 @@
 export interface CartItem {
+//  unit_price_cents: number;
   product: any;
   qty: any;
   product_id: number;

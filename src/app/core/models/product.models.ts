@@ -10,6 +10,8 @@ export interface Product {
   description?: string | null;
   category_id?: number | null;
   image_path?: string | null;
+    discounted_cents?: number;   // 👈 NEW
+  has_promo?: boolean; 
   // ...ajoute si besoin
 }
 

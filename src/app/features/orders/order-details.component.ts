@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { OrdersService } from '../../core/services/orders.service';
 import { Order, OrderStatus } from '../../core/models/order.models';
 import { AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../environments/environment.development';
 
 @Component({
   standalone: true,
@@ -15,7 +16,16 @@ import { AuthService } from '../../core/services/auth.service';
   <div class="flex items-center justify-between mb-3">
     <h2 class="text-xl font-semibold">Commande #{{ o.id }}</h2>
     <div class="flex gap-2">
-      <button class="px-3 py-1 border rounded" (click)="downloadInvoice(o.id)">Facture PDF</button>
+      <button class="px-3 py-1 border rounded"
+        (click)="downloadInvoice(o.id)"
+        [disabled]="!o?.id">
+  Facture PDF
+</button>
+<button class="px-3 py-1 border rounded" (click)="emailInvoice(o.id)">
+  Envoyer la facture par email
+</button>
+
+
 
       <!-- Staff: MAJ statut -->
       <ng-container *ngIf="isStaff()">
@@ -100,12 +110,14 @@ export class OrderDetailsComponent implements OnInit {
   }
 
   reload() {
-    const id = this.idFromRoute();
-    if (!id) return;
-    this.ordersSrv.get(id).subscribe(o => {
-      this.order = o as any;
-    });
-  }
+  const id = this.idFromRoute();
+  if (!id) return;
+
+  this.ordersSrv.get(id).subscribe((o: any) => {
+    this.order = o; // o est déjà déballé par le service
+  });
+}
+
 
   updateStatus(id: number) {
   if (!id) return; // garde-fou
@@ -113,16 +125,25 @@ export class OrderDetailsComponent implements OnInit {
 }
 
 
-  downloadInvoice(id: number) {
-    this.ordersSrv.downloadInvoice(id).subscribe((blob: Blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `invoice-${id}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  }
+  downloadInvoice(id?: number) {
+  const safeId = id ?? this.order?.id;
+  if (!safeId) return; // évite un appel /undefined/invoice
+
+  this.ordersSrv.downloadInvoice(safeId).subscribe((blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Facture-${safeId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+emailInvoice(id: number) {
+  const url = `${environment.apiUrl}/orders/${id}/send-invoice`;
+  this.ordersSrv['http'].post(url, {}).subscribe(() => alert('Facture envoyée !'));
+}
+
+
 
   // payNow(id: number) {
   //   this.ordersSrv.pay(id).subscribe(() => this.reload());

@@ -11,46 +11,105 @@ import { CategoriesService } from '../../../core/services/categories.service';
   selector: 'app-product-form',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <h2 class="text-xl font-semibold mb-3">
+  <div class="max-w-3xl mx-auto">
+    <h2 class="text-2xl font-semibold mb-4 tracking-tight">
       {{ id ? 'Modifier le produit' : 'Créer un produit' }}
     </h2>
 
-    <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-3 max-w-xl">
-      <label>Catégorie *</label>
-      <select class="border rounded p-2" formControlName="category_id">
-        <option [ngValue]="null">—</option>
-        <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.name }}</option>
-      </select>
+    <form [formGroup]="form" (ngSubmit)="save()"
+          class="bg-white rounded-2xl shadow border border-slate-200 p-5 grid gap-5">
 
-      <label>Nom *</label>
-      <input class="border rounded p-2" formControlName="name" />
+      <div class="grid gap-4 md:grid-cols-2">
+        <!-- Catégorie -->
+        <div class="grid gap-1.5">
+          <label class="text-sm text-slate-700">Catégorie *</label>
+          <select class="border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-400/60"
+                  formControlName="category_id">
+            <option [ngValue]="null">—</option>
+            <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.name }}</option>
+          </select>
+          <small *ngIf="form.get('category_id')?.touched && form.get('category_id')?.invalid"
+                 class="text-xs text-red-600">Catégorie requise</small>
+        </div>
 
-      <label>Prix (en francs CFA) *</label>
-      <input type="number" class="border rounded p-2" formControlName="price" />
+        <!-- Nom -->
+        <div class="grid gap-1.5">
+          <label class="text-sm text-slate-700">Nom *</label>
+          <input class="border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-400/60"
+                 formControlName="name" placeholder="Ex : Baguette tradition" />
+          <small *ngIf="form.get('name')?.touched && form.get('name')?.invalid"
+                 class="text-xs text-red-600">Nom requis</small>
+        </div>
 
-      <label>Stock (optionnel)</label>
-      <input type="number" class="border rounded p-2" formControlName="stock" />
+        <!-- Prix -->
+        <div class="grid gap-1.5">
+          <label class="text-sm text-slate-700">Prix (en francs CFA) *</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">F CFA</span>
+            <input type="number"
+                   class="border rounded-xl p-2.5 pl-16 w-full outline-none focus:ring-2 focus:ring-amber-400/60"
+                   formControlName="price" />
+          </div>
+          <small *ngIf="form.get('price')?.touched && form.get('price')?.invalid"
+                 class="text-xs text-red-600">Prix valide requis</small>
+        </div>
 
-      <label>Description (optionnel)</label>
-      <textarea rows="3" class="border rounded p-2" formControlName="description"></textarea>
-      <label>Remise (%) (optionnel)</label>
-<input type="number" min="0" max="100" class="border rounded p-2" formControlName="percent_off" />
-      <!-- ✅ garder seulement l’upload image -->
-      <label>Image (upload)</label>
-      <input type="file" accept="image/*" (change)="onFile($event)" />
+        <!-- Stock -->
+        <div class="grid gap-1.5">
+          <label class="text-sm text-slate-700">Stock (optionnel)</label>
+          <input type="number"
+                 class="border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-400/60"
+                 formControlName="stock" />
+        </div>
 
-      <div class="flex gap-2 mt-2">
+        <!-- Description -->
+        <div class="grid gap-1.5 md:col-span-2">
+          <label class="text-sm text-slate-700">Description (optionnel)</label>
+          <textarea rows="3"
+                    class="border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-400/60"
+                    formControlName="description"
+                    placeholder="Quelques mots sur le produit…"></textarea>
+        </div>
+
+        <!-- Remise -->
+        <div class="grid gap-1.5">
+          <label class="text-sm text-slate-700">Remise (%) (optionnel)</label>
+          <input type="number" min="0" max="100"
+                 class="border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-400/60"
+                 formControlName="percent_off" />
+          <div class="flex items-center justify-between">
+            <small class="text-xs text-slate-500">0 à 100 (ex. 15 = -15%)</small>
+            <small *ngIf="form.get('percent_off')?.touched && form.get('percent_off')?.invalid"
+                   class="text-xs text-red-600">Valeur entre 0 et 100</small>
+          </div>
+        </div>
+
+        <!-- Upload image -->
+        <div class="grid gap-1.5 md:col-span-2">
+          <label class="text-sm text-slate-700">Image (upload)</label>
+          <div class="rounded-xl border border-dashed border-slate-300 p-3 flex items-center justify-between">
+            <input type="file" accept="image/*" (change)="onFile($event)" class="block" />
+            <span class="text-xs text-slate-500" *ngIf="!file">PNG, JPG…</span>
+            <span class="text-xs text-slate-700 font-medium" *ngIf="file">{{ file.name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex flex-wrap items-center gap-2 pt-1">
         <button type="submit"
-                class="px-3 py-2 border rounded bg-black text-white disabled:opacity-50"
+                class="px-4 py-2.5 rounded-xl bg-black text-white font-medium hover:opacity-90 active:scale-[.99] disabled:opacity-50"
                 [disabled]="form.invalid || saving">
           {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
         </button>
-        <a routerLink="/admin/products" class="px-3 py-2 border rounded">Annuler</a>
+        <a routerLink="/admin/products"
+           class="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50">Annuler</a>
+        <span *ngIf="error" class="text-sm text-red-600">{{ error }}</span>
       </div>
-
-      <div *ngIf="error" class="text-sm text-red-600 mt-1">{{ error }}</div>
     </form>
-  `
+  </div>
+`
+
 })
 export class ProductFormComponent {
   private fb = inject(FormBuilder);

@@ -1,5 +1,61 @@
-<form [formGroup]="form" (ngSubmit)="onSubmit()">
-  <input type="email" formControlName="email" />
-  <input type="password" formControlName="password" />
-  <button type="submit">Se connecter</button>
-</form>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-side">
+      <div class="brand">
+        <span class="emoji">🥖</span>
+        <h1>Boulangerie Artisanale</h1>
+        <p>Le goût authentique, livré chez vous.</p>
+      </div>
+      <ul class="bullets">
+        <li>Produits frais chaque jour</li>
+        <li>Paiement sécurisé</li>
+        <li>Livraison rapide</li>
+      </ul>
+    </div>
+
+    <div class="auth-form">
+      <h2>Connexion</h2>
+      <p class="subtitle">
+        Pas de compte ?
+        <a routerLink="/register" class="link">Créer un compte</a>
+      </p>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" placeholder="ex: jean@exemple.com" />
+          <small class="err" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+            <ng-container *ngIf="form.controls.email.errors?.['required']">Email requis.</ng-container>
+            <ng-container *ngIf="form.controls.email.errors?.['email']">Email invalide.</ng-container>
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Mot de passe</span>
+          <input type="password" formControlName="password" placeholder="••••••••" />
+          <small class="err" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+            <ng-container *ngIf="form.controls.password.errors?.['required']">Mot de passe requis.</ng-container>
+            <ng-container *ngIf="form.controls.password.errors?.['minlength']">Minimum 6 caractères.</ng-container>
+          </small>
+        </label>
+
+        <button type="submit" class="btn" [disabled]="form.invalid || loading">
+          <span *ngIf="!loading">Se connecter</span>
+          <span *ngIf="loading" class="spinner"></span>
+        </button>
+
+        <div class="form-error" *ngIf="error">{{ error }}</div>
+
+        <div class="extras">
+          <a routerLink="/forgot" class="link muted">Mot de passe oublié ?</a>
+        </div>
+      </form>
+
+      <!-- Lien d’inscription visible aussi près du bouton sur mobile -->
+      <div class="side-register">
+        <span>Nouvel utilisateur ?</span>
+        <a routerLink="/register" class="btn-outline">Créer un compte</a>
+      </div>
+    </div>
+  </div>
+</div>

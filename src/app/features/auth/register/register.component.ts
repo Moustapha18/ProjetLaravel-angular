@@ -1,31 +1,15 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../core/services/api.service';
+import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
+import { ApiService } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-register',
   standalone: true,
+  selector: 'app-register',
   imports: [CommonModule, FormsModule],
-  template: `
-  <div class="auth-card">
-    <h2>Créer un compte</h2>
-    <form (ngSubmit)="onSubmit()" #f="ngForm">
-      <label>Nom</label>
-      <input name="name" [(ngModel)]="name" required>
-      <label>Email</label>
-      <input type="email" name="email" [(ngModel)]="email" required>
-      <label>Mot de passe</label>
-      <input type="password" name="password" [(ngModel)]="password" required>
-      <label>Confirmer</label>
-      <input type="password" name="password_confirmation" [(ngModel)]="password_confirmation" required>
-      <button type="submit" [disabled]="f.invalid || loading">Créer</button>
-      <p class="ok" *ngIf="ok">Compte créé. Vous pouvez vous connecter.</p>
-      <p class="error" *ngIf="error">{{error}}</p>
-    </form>
-  </div>
-  `,
+  templateUrl: './register.component.html',
+  styleUrls: ['register.component.scss']
 })
 export class RegisterComponent {
   private api = inject(ApiService);
@@ -35,16 +19,39 @@ export class RegisterComponent {
   email = '';
   password = '';
   password_confirmation = '';
+
   loading = false;
   error: string | null = null;
   ok = false;
 
-  onSubmit() {
-    this.loading = true; this.error = null; this.ok = false;
-    this.api.register({ name: this.name, email: this.email, password: this.password, password_confirmation: this.password_confirmation })
-      .subscribe({
-        next: () => { this.ok = true; this.loading = false; /* this.router.navigateByUrl('/auth/login'); */ },
-        error: (err: { error: { message: string; }; }) => { this.error = err?.error?.message ?? 'Erreur inscription'; this.loading = false; }
-      });
+  get mismatch(): boolean {
+    return !!this.password && !!this.password_confirmation && this.password !== this.password_confirmation;
+  }
+
+  onSubmit(f: NgForm) {
+    if (f.invalid || this.loading || this.mismatch) return;
+
+    this.loading = true;
+    this.error = null;
+    this.ok = false;
+
+    const payload = {
+      name: this.name.trim(),
+      email: this.email.trim().toLowerCase(),
+      password: this.password,
+      password_confirmation: this.password_confirmation,
+    };
+
+    this.api.register(payload).subscribe({
+      next: () => {
+        this.loading = false;
+        // Redirige vers la page de connexion après inscription
+        this.router.navigateByUrl('/login');
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err?.error?.message ?? 'Erreur lors de la création du compte.';
+      }
+    });
   }
 }

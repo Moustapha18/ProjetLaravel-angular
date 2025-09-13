@@ -5,215 +5,254 @@ import { AuthService } from './core/services/auth.service';
 import { CartService } from './core/services/cart.service';
 import { ToastsComponent } from "./shared/toasts.component";
 import { MiniCartComponent } from "./admin/components/shared/mini-cart.component";
+import { SupportService } from './core/services/support.service';
+import { SupportChatComponent } from "./shared/support-chat.component";
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ToastsComponent, MiniCartComponent],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
+    ToastsComponent, MiniCartComponent, SupportChatComponent],
   template: `
-    <!-- Header Principal -->
-    <header class="main-header" *ngIf="isLoggedIn()">
-      <div class="header-container">
-        <div class="header-content">
-          <!-- Logo -->
-          <a routerLink="/products" class="brand-link">
-            <span class="brand-icon">🥖</span>
-            <span class="brand-text">Boulangerie Artisanale</span>
+  <!-- Barre mobile (header compact) -->
+  <header class="topbar" *ngIf="isLoggedIn()">
+    <button class="burger" (click)="toggleSidebar()" aria-label="Ouvrir le menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a routerLink="/products" class="brand">
+      <span class="brand-icon">🥖</span>
+      <span class="brand-text">Boulangerie Artisanale</span>
+    </a>
+    <div class="topbar-actions">
+      <a routerLink="/checkout" class="pill pill-primary hide-sm">
+        💳 <span class="hide-xs">Payer</span>
+      </a>
+      <button class="pill pill-danger" (click)="logout()">
+        🚪 <span class="hide-xs">Déconnexion</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout" [class.authless]="!isLoggedIn()">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" *ngIf="isLoggedIn()" [class.open]="sidebarOpen">
+      <div class="sidebar-header">
+        <a routerLink="/products" class="brand">
+          <span class="brand-icon">🥖</span>
+          <span class="brand-text">Boulangerie Artisanale</span>
+        </a>
+        <button class="close-btn" (click)="closeSidebar()" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="profile-row">
+        <span class="role" [attr.data-role]="(role() || 'CLIENT').toLowerCase()">
+          {{ (role() || 'CLIENT') | uppercase }}
+        </span>
+      </div>
+
+      <!-- NAV PRINCIPALE -->
+      <nav class="nav">
+        <a routerLink="/products" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">🛍️ Nos Produits</a>
+         <!-- Dans la navbar / sidebar -->
+<a [routerLink]="isStaff() ? '/admin/orders' : '/orders/me'"
+   routerLinkActive="active"
+   class="nav-link"
+   (click)="closeSidebar()">📋 Mes commandes</a>
+
+
+        <!-- Mini-cart (ton composant existant) -->
+        <app-mini-cart>
+          <a routerLink="/cart" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">
+            🛒 Panier
+            <span *ngIf="cartCount() > 0" class="badge">{{ cartCount() }}</span>
           </a>
+        </app-mini-cart>
 
-          <!-- Nav desktop -->
-          <nav class="main-nav">
-            <a routerLink="/products" routerLinkActive="nav-active" class="nav-link">Nos Produits</a>
+        <a routerLink="/checkout" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">💳 Payer</a>
+      </nav>
 
-            <ng-container *ngIf="isStaff()">
-              <span class="admin-label">ADMIN</span>
-              <a routerLink="/admin/products" routerLinkActive="admin-active" class="admin-link">Produits</a>
-              <a routerLink="/admin/categories" routerLinkActive="admin-active" class="admin-link">Catégories</a>
-              <a *ngIf="isAdmin()" routerLink="/admin/users" routerLinkActive="admin-active" class="admin-link">Utilisateurs</a>
-            </ng-container>
-          </nav>
+      <!-- ZONE ADMIN -->
+      <ng-container *ngIf="isStaff()">
+        <div class="section-title">Administration</div>
+        <nav class="nav admin">
+          <a routerLink="/admin/products" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">📦 Produits</a>
+          <a routerLink="/admin/categories" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">🗂️ Catégories</a>
+          <a routerLink="/admin/promotions" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">🏷️ Promotions</a>
+          <a *ngIf="isAdmin()" routerLink="/admin/users" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">👥 Utilisateurs</a>
 
-          <!-- Actions -->
-          <div class="user-actions">
-            <span class="role-badge" [attr.data-role]="(role() || 'CLIENT').toLowerCase()">
-              {{ (role() || 'CLIENT') | uppercase }}
-            </span>
+          <div class="divider"></div>
+          <a *ngIf="isAdmin()" routerLink="/admin/products/new" class="nav-link subtle" (click)="closeSidebar()">➕ Nouveau produit</a>
+          <a *ngIf="isAdmin()" routerLink="/admin/users/new" class="nav-link subtle" (click)="closeSidebar()">➕ Nouvel employé</a>
+          <a *ngIf="isAdmin()" routerLink="/admin/promotions/new" class="nav-link subtle" (click)="closeSidebar()">➕ Nouvelle promo</a>
+        </nav>
+      </ng-container>
 
-            <ng-container *ngIf="isLoggedIn(); else guest">
-              <!-- Raccourcis admin -->
-              <a *ngIf="isAdmin()" routerLink="/admin/products/new" class="btn btn-success">
-                <span class="btn-icon">➕</span><span class="btn-text">Nouveau</span>
-              </a>
-              <a *ngIf="isAdmin()" routerLink="/admin/users/new" class="btn btn-secondary hide-sm">
-                <span class="btn-icon">➕</span><span class="btn-text">Employé</span>
-              </a>
+      <div class="spacer"></div>
 
-              <a routerLink="/orders" routerLinkActive="btn-active" class="btn btn-secondary hide-sm">
-                <span class="btn-icon">📋</span><span class="btn-text">Commandes</span>
-              </a>
-
-              <app-mini-cart>
-                <a routerLink="/cart" routerLinkActive="cart-active" class="cart-button">
-                  <span class="cart-icon">🛒</span>
-                  <span class="cart-text hide-sm">Panier</span>
-                  <span *ngIf="cartCount() > 0" class="cart-badge">{{ cartCount() }}</span>
-                </a>
-              </app-mini-cart>
-
-              <a routerLink="/checkout" class="btn btn-primary hide-sm">
-                <span class="btn-icon">💳</span><span class="btn-text">Payer</span>
-              </a>
-
-              <button (click)="logout()" class="btn btn-danger">
-                <span class="btn-icon">🚪</span><span class="btn-text hide-sm">Déconnexion</span>
-              </button>
-            </ng-container>
-
-            <ng-template #guest>
-              <a routerLink="/login" class="btn btn-primary">
-                <span class="btn-icon">👤</span><span class="btn-text hide-sm">Se Connecter</span>
-              </a>
-            </ng-template>
-
-            <!-- Burger -->
-            <button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
-              <span class="hamburger-line"></span>
-              <span class="hamburger-line"></span>
-              <span class="hamburger-line"></span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Menu Mobile -->
-        <div class="mobile-menu" [class.mobile-menu-open]="isMobileMenuOpen">
-          <a routerLink="/products" (click)="closeMobileMenu()" class="mobile-link">Nos Produits</a>
-
-          <div *ngIf="isLoggedIn()" class="mobile-user-section">
-            <a routerLink="/orders" (click)="closeMobileMenu()" class="mobile-link">📋 Mes Commandes</a>
-
-            <div *ngIf="isStaff()" class="mobile-admin-section">
-              <span class="mobile-admin-title">Administration</span>
-              <a routerLink="/admin/products" (click)="closeMobileMenu()" class="mobile-admin-link">Gestion Produits</a>
-              <a routerLink="/admin/categories" (click)="closeMobileMenu()" class="mobile-admin-link">Gestion Catégories</a>
-              <a *ngIf="isAdmin()" routerLink="/admin/users" (click)="closeMobileMenu()" class="mobile-admin-link">Gestion Utilisateurs</a>
-              <a *ngIf="isAdmin()" routerLink="/admin/users/new" (click)="closeMobileMenu()" class="mobile-admin-link">+ Nouvel employé</a>
-            </div>
-          </div>
-        </div>
+      <!-- Actions bas de sidebar -->
+      <div class="sidebar-footer">
+        <button class="pill pill-primary w-full" (click)="toggleChat()">
+          💬 Support
+        </button>
+        <button class="pill pill-danger w-full" (click)="logout()">
+          🚪 Déconnexion
+        </button>
       </div>
-    </header>
+    </aside>
 
-    <!-- Contenu -->
-    <main class="main-content" [class.no-chrome]="!isLoggedIn()">
-      <div class="content-container">
-        <router-outlet />
+    <!-- OVERLAY mobile -->
+    <div class="overlay" *ngIf="isLoggedIn()" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>
+
+    <!-- CONTENU PRINCIPAL -->
+    <main class="content">
+      <div class="content-inner">
+        <router-outlet></router-outlet>
       </div>
+
+      <footer class="footer" *ngIf="isLoggedIn()">
+        © 2024 Boulangerie Artisanale — Fait avec ❤️ pour le goût authentique
+      </footer>
     </main>
+  </div>
 
-    <!-- Footer -->
-    <footer class="main-footer" *ngIf="isLoggedIn()">
-      <div class="footer-container">
-        <p class="footer-text">© 2024 Boulangerie Artisanale - Fait avec ❤️ pour le goût authentique</p>
-      </div>
-    </footer>
+  <!-- TOASTS -->
+  <app-toasts></app-toasts>
 
-    <app-toasts></app-toasts>
+  <!-- CHAT SUPPORT -->
+  <button *ngIf="isLoggedIn()" class="chat-fab" (click)="toggleChat()" aria-label="Ouvrir le chat">💬</button>
+  <section *ngIf="isLoggedIn()" class="chat-drawer" [class.open]="chatOpen">
+  <header class="chat-header">
+    <strong>Support client</strong>
+    <button (click)="toggleChat()" aria-label="Fermer">✕</button>
+  </header>
+  <div class="chat-body">
+    <app-support-chat></app-support-chat> <!-- <= ICI -->
+  </div>
+</section>
+
   `,
   styles: [`
     :host {
-      --primary-color: #d97706;
-      --primary-light: #fbbf24;
-      --primary-dark: #92400e;
-      --secondary-color: #059669;
-      --danger-color: #dc2626;
-      --info-color: #0ea5e9;
-
-      --bg-primary: #fffbeb;
-      --bg-secondary: #fef3c7;
-      --text-primary: #1f2937;
-      --text-secondary: #6b7280;
-
-      --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
-      --shadow-md: 0 4px 6px rgba(0,0,0,.1);
-
-      --radius: 10px;
-      --transition: all .25s ease;
+      --primary: #d97706;
+      --primary-2: #f59e0b;
+      --bg: #fff7ed;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #f1f5f9;
+      --success: #059669;
+      --info: #0ea5e9;
+      --danger: #dc2626;
+      --radius: 12px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 6px 18px rgba(0,0,0,.08);
+      --transition: .25s ease;
     }
 
-    /* HEADER */
-    .main-header { background: linear-gradient(135deg,var(--bg-primary),var(--bg-secondary)); border-bottom: 2px solid var(--primary-light); box-shadow: var(--shadow-md); position: sticky; top:0; z-index:1000; }
+    /* Topbar (mobile/compact) */
+    .topbar {
+      position: sticky; top:0; z-index: 30;
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border-bottom: 1px solid var(--border);
+      padding: .5rem .75rem;
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .5rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .burger { background: none; border: none; display: inline-flex; flex-direction: column; gap: 4px; padding: .4rem; cursor: pointer; }
+    .burger span { width: 22px; height: 2px; background: #111; display: block; }
+    .brand { display:inline-flex; align-items:center; gap:.5rem; text-decoration:none; color:#8b5a14; font-weight:700; }
+    .brand-icon { font-size: 1.2rem; }
+    .brand-text { display:inline; }
+    .topbar-actions { display:flex; gap:.4rem; align-items:center; }
+    .hide-sm { display: none; }
+    .hide-xs { display: none; }
+    @media (min-width: 520px){ .hide-xs{ display: inline; } }
+    @media (min-width: 900px){ .hide-sm{ display: inline-flex; } }
 
-    .header-container { max-width: 1200px; margin: 0 auto; padding: 0 .75rem; }
+    /* Pills boutons */
+    .pill { display:inline-flex; align-items:center; gap:.35rem; padding:.45rem .7rem; border-radius: 999px; border:1px solid var(--border); background: #fff; cursor: pointer; text-decoration: none; color: var(--text); }
+    .pill-primary { background: var(--info); color:#fff; border-color: transparent; }
+    .pill-danger  { background: var(--danger); color:#fff; border-color: transparent; }
+    .w-full { width:100%; }
 
-    /* ✅ Grid pour une vraie responsivité */
-    .header-content {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      gap: .75rem;
-      padding: .75rem 0;
+    /* Layout */
+    .layout { display: grid; grid-template-columns: 1fr; min-height: 100vh; background: var(--bg); }
+    .layout.authless { grid-template-columns: 1fr; }
+    @media (min-width: 1024px){
+      .layout { grid-template-columns: 280px 1fr; }
     }
 
-    /* Colonne gauche = brand */
-    .brand-link { display:inline-flex; align-items:center; gap:.6rem; text-decoration:none; color:var(--primary-dark); font-weight:700; font-size:1.25rem; }
-    .brand-link:hover { color: var(--primary-color); }
-    .brand-icon { font-size:1.6rem; }
-    .brand-text { display:inline-block; }
-    @media (max-width: 480px){ .brand-text { display:none; } }
-
-    /* Colonne centre = nav (desktop) */
-    .main-nav { display:flex; align-items:center; justify-content:center; gap:1.25rem; }
-    .nav-link { color:var(--text-primary); text-decoration:none; font-weight:500; padding:.25rem 0; border-bottom:2px solid transparent; }
-    .nav-link.nav-active { border-bottom-color: var(--primary-color); color: var(--primary-dark); }
-
-    .admin-label { font-size:.72rem; color:#9ca3af; border-left: 2px solid var(--primary-light); padding-left: .8rem; margin-left:.4rem; }
-
-    .admin-link { color:var(--text-secondary); text-decoration:none; font-size:.9rem; padding:.2rem .4rem; border-radius: var(--radius); }
-    .admin-link:hover, .admin-link.admin-active { background:#fff3; }
-
-    /* Colonne droite = actions */
-    .user-actions { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; flex-wrap: wrap; }
-    .role-badge {
-      display:inline-flex; align-items:center; height:28px; padding:0 .6rem; border-radius:999px; font-size:.72rem; font-weight:700; border:1px solid #e5e7eb; color:#374151; background:#fff;
+    /* Sidebar */
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 82%;
+      background: linear-gradient(180deg, #fffdfa, #fff);
+      border-right: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      transform: translateX(-100%);
+      transition: transform var(--transition);
+      z-index: 40; padding: .75rem .75rem 1rem;
+      display: flex; flex-direction: column;
     }
-    .btn { display:inline-flex; align-items:center; gap:.45rem; padding:.45rem .75rem; border:none; border-radius: var(--radius); text-decoration:none; cursor:pointer; transition:var(--transition); box-shadow: var(--shadow-sm); font-size:.9rem; }
-    .btn:hover { transform: translateY(-1px); }
-    .btn-primary { background: var(--info-color); color:#fff; }
-    .btn-secondary { background: #fff; color: var(--primary-dark); border:1px solid var(--primary-light); }
-    .btn-success { background: var(--secondary-color); color:#fff; }
-    .btn-danger  { background: var(--danger-color); color:#fff; }
-
-    .hide-sm { display:inline-flex; }
-    @media (max-width: 768px){ .hide-sm { display:none; } }
-
-    /* Cart */
-    .cart-button { position:relative; display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .7rem; background:var(--primary-color); color:#fff; border-radius: var(--radius); }
-    .cart-badge { position:absolute; top:-6px; right:-6px; width:18px; height:18px; font-size:.7rem; display:flex; align-items:center; justify-content:center; background:var(--danger-color); color:#fff; border-radius:50%; }
-
-    /* Burger & mobile menu */
-    .mobile-menu-toggle { display:none; flex-direction:column; gap:4px; background:none; border:none; padding:.4rem; }
-    .hamburger-line { width:22px; height:2px; background:#111; }
-
-    @media (max-width: 1024px){
-      .main-nav { display:none; }             /* cache nav desktop */
-      .mobile-menu-toggle { display:flex; }   /* montre burger */
+    .sidebar.open { transform: translateX(0); }
+    @media (min-width: 1024px){
+      .sidebar { position: sticky; transform:none; width:auto; }
     }
 
-    .mobile-menu { display:none; flex-direction:column; gap:.25rem; margin:.5rem 0 1rem; padding-top:.5rem; border-top:1px solid var(--primary-light); }
-    .mobile-menu.mobile-menu-open { display:flex; }
-    .mobile-link { padding:.6rem .4rem; border-radius:6px; text-decoration:none; color:#111; }
-    .mobile-link:hover { background:#fff; }
+    .sidebar-header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding-bottom:.5rem; border-bottom:1px dashed var(--border); }
+    .close-btn { background:none; border:none; font-size:1.1rem; cursor:pointer; }
+    .profile-row { display:flex; align-items:center; justify-content:space-between; margin:.75rem 0; }
+    .role { padding:.2rem .6rem; border:1px solid var(--border); border-radius: 999px; font-size:.75rem; font-weight:700; color:#374151; background:#fff; }
 
-    .mobile-user-section { padding-left:.5rem; border-left:2px solid var(--primary-light); display:flex; flex-direction:column; gap:.25rem; }
-    .mobile-admin-section { margin-top:.25rem; padding-left:.5rem; border-left:2px solid var(--primary-light); display:flex; flex-direction:column; gap:.15rem; }
-    .mobile-admin-title { font-size:.72rem; color:#6b7280; text-transform:uppercase; margin:.25rem 0; }
+    .section-title { margin:.75rem 0 .25rem; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+    .divider { height:1px; background: var(--border); margin:.35rem 0; }
 
-    /* Main & footer */
-    .main-content { min-height: calc(100vh - 200px); background: linear-gradient(135deg,#fef7ed,#fff7ed); }
-    .content-container { max-width:1200px; margin:0 auto; padding:1rem .75rem; }
-    .main-footer { background:#111; color:#f7f7f7; padding:1rem 0; }
-    .footer-container { max-width:1200px; margin:0 auto; padding:0 .75rem; text-align:center; }
-    .footer-text { margin:0; font-size:.85rem; opacity:.9; }
+    .nav { display:flex; flex-direction:column; gap:.25rem; }
+    .nav.admin { margin-bottom:.25rem; }
+    .nav-link {
+      display:flex; align-items:center; gap:.5rem; padding:.55rem .6rem;
+      text-decoration:none; color: var(--text);
+      border-radius: 10px; transition: background var(--transition), transform var(--transition);
+    }
+    .nav-link:hover { background:#fff2; transform: translateX(2px); }
+    .nav-link.active { background:#fef3c7; border: 1px solid #fde68a; }
+    .nav-link.subtle { color: #6b7280; font-size: .92rem; }
+    .badge {
+      margin-left:auto; background: var(--danger); color:#fff; border-radius: 999px; padding: 0 .45rem; font-size:.7rem;
+    }
+
+    .spacer { flex: 1 1 auto; }
+    .sidebar-footer { display:flex; flex-direction:column; gap:.5rem; }
+
+    /* Overlay (mobile) */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.28);
+      opacity:0; pointer-events:none; transition: opacity var(--transition); z-index: 35;
+    }
+    .overlay.show { opacity:1; pointer-events:auto; }
+    @media (min-width:1024px){ .overlay{ display:none; } }
+
+    /* Contenu */
+    .content { min-height: 100vh; display:flex; flex-direction:column; }
+    .content-inner { max-width: 1200px; margin: 0 auto; padding: 1rem .75rem 2.5rem; width:100%; }
+    .footer { margin-top:auto; background:#111; color:#f7f7f7; padding: .85rem; text-align:center; font-size:.88rem; }
+
+    /* Chat */
+    .chat-fab {
+      position: fixed; right: 16px; bottom: 16px;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--primary); color: #fff; border: none;
+      box-shadow: var(--shadow-md); cursor: pointer; font-size: 1.1rem; z-index: 45;
+    }
+    .chat-drawer {
+      position: fixed; right: 16px; bottom: 80px;
+      width: min(380px, 92vw); height: 60vh; max-height: 600px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow-md); transform: translateY(16px); opacity:0; pointer-events:none;
+      transition: all var(--transition); z-index: 45; display:flex; flex-direction:column;
+    }
+    .chat-drawer.open { transform: translateY(0); opacity:1; pointer-events:auto; }
+    .chat-header { display:flex; justify-content:space-between; align-items:center; padding:.6rem .8rem; border-bottom:1px solid var(--border); background:#fffbeb; border-radius: 12px 12px 0 0; }
+    .chat-body { flex:1; padding:.5rem; }
   `]
 })
 export class AppComponent {
@@ -221,9 +260,10 @@ export class AppComponent {
   private router = inject(Router);
   private cart = inject(CartService);
 
-  isMobileMenuOpen = false;
+  sidebarOpen = false;  // mobile: fermé par défaut
+  chatOpen = false;
 
-  // getters
+  // existants conservés
   isLoggedIn = () => (typeof this.auth.isLoggedIn === 'function' ? this.auth.isLoggedIn : this.auth.isLoggedIn);
   role       = () => (typeof this.auth.role       === 'function' ? this.auth.role       : this.auth.role);
   cartCount  = () => (typeof (this.cart as any).count === 'function' ? (this.cart as any).count() : (this.cart as any).count ?? 0);
@@ -231,7 +271,7 @@ export class AppComponent {
   logout() {
     this.auth.logout();
     this.router.navigateByUrl('/login');
-    this.closeMobileMenu();
+    this.closeSidebar();
   }
 
   isAdmin() {
@@ -240,12 +280,19 @@ export class AppComponent {
   }
 
   isStaff() {
-    const r = this.role();
-    const R = String(r || '').toUpperCase();
-    // AuthService normalise vers 'EMPLOYEE'
+    const R = String(this.role() || '').toUpperCase();
     return R === 'ADMIN' || R === 'EMPLOYEE';
   }
 
-  toggleMobileMenu(){ this.isMobileMenuOpen = !this.isMobileMenuOpen; }
-  closeMobileMenu(){ this.isMobileMenuOpen = false; }
+  // Compat: anciens noms conservés
+  toggleMobileMenu(){ this.toggleSidebar(); }
+  closeMobileMenu(){ this.closeSidebar(); }
+
+  toggleSidebar(){ this.sidebarOpen = !this.sidebarOpen; }
+  closeSidebar(){ this.sidebarOpen = false; }
+
+  toggleChat(){
+    this.chatOpen = !this.chatOpen;
+    // Si ton widget chat s’injecte via script, tu peux le monter/cibler #support-chat-root ici si besoin.
+  }
 }

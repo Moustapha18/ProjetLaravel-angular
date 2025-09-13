@@ -5,7 +5,7 @@ import { roleGuard } from './core/guards/role.guard';
 
 // Layouts
 import { AuthLayoutComponent } from './layouts/auth-layout.component';
-import { AppLayoutComponent } from './layouts/app-layout.component';
+//import { AppLayoutComponent } from './layouts/app-layout.component';
 
 // Raccourci : rôles autorisés côté "staff"
 const STAFF = ['EMPLOYE', 'ADMIN'];
@@ -25,6 +25,11 @@ export const appRoutes: Routes = [
           import('./features/auth/login/login.component').then(m => m.LoginComponent),
       },
       {
+        path: 'register',                              // 👈👈 AJOUT ICI
+        loadComponent: () =>
+          import('./features/auth/register/register.component').then(m => m.RegisterComponent),
+      },
+      {
         path: 'first-login',
         loadComponent: () =>
           import('./features/auth/first-login.component').then(m => m.FirstLoginComponent),
@@ -35,7 +40,7 @@ export const appRoutes: Routes = [
   // ---------- APP (protégée, avec navbar) ----------
   {
     path: '',
-    component: AppLayoutComponent,
+   // component: AppLayoutComponent,
     canActivate: [authGuard],
     children: [
       // ===== Catalogue (tout utilisateur connecté) =====
@@ -170,6 +175,22 @@ export const appRoutes: Routes = [
           import('./admin/components/users/admin-user-form.component')
             .then(m => m.AdminUserFormComponent),
       },
+      // ===== Promotions (ADMIN seulement) =====
+      { path: 'admin/promotions',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./admin/components/promotions/promotion-list.component')
+            .then(m => m.PromotionsListComponent),
+      },
+      { path: 'admin/promotions/new',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./admin/components/promotions/promotion-form.component')
+            .then(m => m.PromotionFormComponent),
+      },
+      
 
       // Confort : /admin -> /admin/products
       { path: 'admin', redirectTo: 'admin/products', pathMatch: 'full' },

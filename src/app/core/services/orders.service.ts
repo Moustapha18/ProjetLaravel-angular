@@ -12,8 +12,15 @@ export class OrdersService {
   create(payload: {
     items: { product_id: number; qty: number }[];
     address?: string;
+    promo_code?: string; 
   }) {
     return this.http.post(`${environment.apiUrl}/orders`, payload);
+  }
+  validatePromo(code: string, amount_cents?: number) {
+    return this.http.post<{valid:boolean; discount_cents:number; promotion:any; reason?:string}>(
+      `${environment.apiUrl}/promotions/validate`,
+      { code, amount_cents }
+    );
   }
 
   // Client: payer sa commande (MVP)
@@ -53,4 +60,8 @@ export class OrdersService {
     const url = `${environment.apiUrl}/orders/${orderId}/invoice`;
     return this.http.get(url, { responseType: 'blob' });
   }
+  sendInvoice(orderId: number) {
+  return this.http.post(`${environment.apiUrl}/orders/${orderId}/send-invoice`, {});
+}
+
 }

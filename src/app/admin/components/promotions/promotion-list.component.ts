@@ -1,102 +1,110 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { CommonModule, DatePipe, CurrencyPipe } from '@angular/common';
+import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { PromotionsService } from '../../services/promotions.service';
-import { Promotion } from '../../models/admin.models';
+import { PromotionsService } from '../../../admin/services/promotions.service';
+import { Promotion } from '../../../admin/models/promotion.model';
 
-type Meta = { current_page: number; last_page: number; total: number };
+type Meta = { current_page:number; last_page:number; total:number };
 
 @Component({
   standalone: true,
-  selector: 'app-promotion-list',
-  imports: [CommonModule, RouterLink, FormsModule],
+  selector: 'app-promotions-list',
+  imports: [CommonModule, RouterLink, FormsModule, DatePipe, CurrencyPipe],
   template: `
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-xl font-semibold">Promotions</h2>
-      <a routerLink="/admin/promotions/new" class="px-3 py-2 border rounded">Nouvelle promo</a>
-    </div>
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-semibold">Promotions</h2>
+    <a class="px-3 py-1 bg-black text-white rounded" [routerLink]="['/admin/promotions/new']">Nouvelle promotion</a>
+  </div>
 
-    <div class="flex items-center gap-2 mb-3">
-      <input class="border p-2 rounded w-full" [(ngModel)]="q" (keyup.enter)="applySearch()" placeholder="Rechercher..." />
-      <button class="px-3 py-2 border rounded" (click)="applySearch()">Rechercher</button>
-    </div>
+  <div class="flex gap-2 items-center mb-3">
+    <select class="border rounded p-2" [(ngModel)]="appliesTo" (change)="reload()">
+      <option value="">Tous</option>
+      <option value="ORDER">Commande</option>
+      <option value="PRODUCT">Produit</option>
+    </select>
+  </div>
 
-    <div *ngIf="loading()">Chargement…</div>
-    <div *ngIf="!loading() && items().length===0" class="text-gray-500">Aucune promotion.</div>
+  <div *ngIf="loading()">Chargement…</div>
 
-    <table class="w-full text-sm border" *ngIf="!loading() && items().length">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="p-2 text-left">Nom</th>
-          <th class="p-2 text-left">% Réduc</th>
-          <th class="p-2 text-left">Début</th>
-          <th class="p-2 text-left">Fin</th>
-          <th class="p-2 w-32"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let p of items()" class="border-t">
-          <td class="p-2">{{ p.name }}</td>
-          <td class="p-2">{{ p.percent_off }}%</td>
-          <td class="p-2">{{ p.starts_at ? (p.starts_at | date:'shortDate') : '—' }}</td>
-          <td class="p-2">{{ p.ends_at ? (p.ends_at | date:'shortDate') : '—' }}</td>
-          <td class="p-2 text-right">
-            <a [routerLink]="['/admin/promotions', p.id]" class="text-blue-700 mr-2">Éditer</a>
-            <button (click)="remove(p)" class="text-red-600">Supprimer</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <table class="w-full text-sm border" *ngIf="!loading() && items().length">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="p-2 text-left">Nom</th>
+        <th class="p-2">Code</th>
+        <th class="p-2">Cible</th>
+        <th class="p-2">Type</th>
+        <th class="p-2 text-right">Valeur</th>
+        <th class="p-2 text-center">Actif</th>
+        <th class="p-2">Période</th>
+        <th class="p-2 w-40"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="border-t" *ngFor="let p of items()">
+        <td class="p-2">{{ p.name }}</td>
+        <td class="p-2 font-mono">{{ p.code || '—' }}</td>
+        <td class="p-2 text-center">{{ p.applies_to }}</td>
+        <td class="p-2 text-center">{{ p.type }}</td>
+        <td class="p-2 text-right">
+          <ng-container [ngSwitch]="p.type">
+            <span *ngSwitchCase="'PERCENT'">{{ p.value }} %</span>
+            <span *ngSwitchCase="'FIXED'">{{ (p.value||0)/100 | currency:'XOF' }}</span>
+          </ng-container>
+        </td>
+        <td class="p-2 text-center">
+          <span [class]="p.active ? 'badge-paid' : 'badge-unpaid'">{{ p.active ? 'Oui' : 'Non' }}</span>
+        </td>
+        <td class="p-2">
+          <div *ngIf="p.start_at || p.end_at">
+            <span *ngIf="p.start_at">{{ p.start_at | date:'shortDate' }}</span>
+            <span>→</span>
+            <span *ngIf="p.end_at">{{ p.end_at | date:'shortDate' }}</span>
+          </div>
+          <div *ngIf="!p.start_at && !p.end_at" class="text-gray-500">—</div>
+        </td>
+        <td class="p-2 text-right">
+          <a class="kbd mr-2" [routerLink]="['/admin/promotions', p.id, 'edit']">Éditer</a>
+          <button class="kbd" (click)="confirmDelete(p)">Supprimer</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 
-    <div class="flex gap-2 items-center mt-4" *ngIf="meta() as m">
-      <button (click)="prev()" [disabled]="m.current_page<=1" class="px-2 py-1 border rounded">◀</button>
-      <span>Page {{ m.current_page }} / {{ m.last_page }} — {{ m.total }} promotions</span>
-      <button (click)="next()" [disabled]="m.current_page>=m.last_page" class="px-2 py-1 border rounded">▶</button>
-    </div>
+  <div class="flex gap-2 items-center mt-4" *ngIf="meta() as m">
+    <button (click)="go(m.current_page - 1)" [disabled]="m.current_page<=1" class="px-2 py-1 border rounded">◀</button>
+    <span>Page {{ m.current_page }} / {{ m.last_page }} — {{ m.total }} promos</span>
+    <button (click)="go(m.current_page + 1)" [disabled]="m.current_page>=m.last_page" class="px-2 py-1 border rounded">▶</button>
+  </div>
   `
 })
-export class PromotionListComponent implements OnInit {
-  private svc = inject(PromotionsService);
-  private route = inject(ActivatedRoute);
+export class PromotionsListComponent implements OnInit {
+  private srv = inject(PromotionsService);
   private router = inject(Router);
 
   loading = signal(false);
-  items   = signal<Promotion[]>([]);
-  meta    = signal<Meta | null>(null);
-
-  q = '';
+  items = signal<Promotion[]>([]);
+  meta = signal<Meta|null>(null);
   page = 1;
-    productsSrv: any;
+  appliesTo = '';
 
-  ngOnInit() {
-    this.route.queryParamMap.subscribe(p => {
-      this.q    = p.get('q') ?? '';
-      this.page = +(p.get('page') ?? 1);
-      this.load();
-    });
+  ngOnInit(){ this.reload(); }
+
+  reload(){
+    this.loading.set(true);
+    this.srv.list({ page: this.page, per_page: 12, applies_to: this.appliesTo || undefined})
+      .subscribe({
+        next: (res:any) => { this.items.set(res.data || res.items || []); this.meta.set(res.meta || null); },
+        error: () => {},
+        complete: () => this.loading.set(false)
+      });
   }
 
- load() {
-  this.loading.set(true);
-  this.productsSrv.list({ search: this.q || undefined, page: this.page, per_page: 12 })
-    .subscribe((res: { data: any; meta: any; }) => {
-      // ⬇️ CORRECTION: ne plus référencer res.items
-      this.items.set(res?.data ?? []);
-      this.meta.set(res?.meta ?? null);
-      this.loading.set(false);
-    });
-}
+  go(p:number){ this.page = p; this.reload(); }
 
-  applySearch() {
-    this.router.navigate([], { queryParams: { q: this.q || null, page: 1 }, queryParamsHandling: 'merge' });
-  }
-
-  next(){ const m = this.meta(); if (m && m.current_page < m.last_page) this.router.navigate([], { queryParams: { page: m.current_page + 1 }, queryParamsHandling: 'merge' }); }
-  prev(){ const m = this.meta(); if (m && m.current_page > 1) this.router.navigate([], { queryParams: { page: m.current_page - 1 }, queryParamsHandling: 'merge' }); }
-
-  remove(p: Promotion){
-    if (!confirm(`Supprimer "${p.name}" ?`)) return;
-    this.svc.delete(p.id).subscribe(() => this.load());
+  confirmDelete(p: Promotion){
+    if (!p.id) return;
+    if (!confirm(`Supprimer la promotion « ${p.name} » ?`)) return;
+    this.srv.remove(p.id).subscribe(() => this.reload());
   }
 }

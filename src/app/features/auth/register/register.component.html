@@ -1,1 +1,43 @@
-<p>register works!</p>
+<div class="auth-page">
+  <div class="auth-card">
+    <h2>Créer un compte</h2>
+    <p class="subtitle">Rejoignez la Boulangerie Artisanale en quelques secondes.</p>
+
+    <form #f="ngForm" (ngSubmit)="onSubmit(f)" novalidate>
+      <label class="field">
+        <span>Nom</span>
+        <input name="name" [(ngModel)]="name" required />
+      </label>
+
+      <label class="field">
+        <span>Email</span>
+        <input name="email" type="email" [(ngModel)]="email" required />
+      </label>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Mot de passe</span>
+          <input name="password" type="password" [(ngModel)]="password" required minlength="6" />
+        </label>
+
+        <label class="field">
+          <span>Confirmer</span>
+          <input name="password_confirmation" type="password" [(ngModel)]="password_confirmation" required minlength="6" />
+        </label>
+      </div>
+
+      <div class="hint" *ngIf="mismatch">⚠ Les mots de passe ne correspondent pas.</div>
+
+      <button class="btn" type="submit" [disabled]="f.invalid || mismatch || loading">
+        {{ loading ? 'Création du compte…' : 'Créer mon compte' }}
+      </button>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+
+      <div class="extras">
+        <span>Déjà inscrit ?</span>
+        <a routerLink="/login" class="link">Se connecter</a>
+      </div>
+    </form>
+  </div>
+</div>

@@ -10,6 +10,7 @@ import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
+  styleUrls: ['./admin-product-list.component.scss'],
   selector: 'app-admin-product-list',
   imports: [CommonModule, RouterLink],
    styles: [`
